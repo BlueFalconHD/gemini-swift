@@ -132,73 +132,43 @@ public class GeminiClient: @unchecked Sendable {
                 return
             }
             let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
-            
-            // serverCert is CFArray<UnsafeRawPointer<SecCertificate>>
-            guard let serverCert = SecTrustCopyCertificateChain(trust) else {
-                secProtocolVerifyComplete(false)
-                return
-            }
-            
-            // make sure there is at least one certificate
-            if CFArrayGetCount(serverCert) == 0 {
-                secProtocolVerifyComplete(false)
-                //FIXME: handle error better
-                return
-            }
-            
-
-// Other method, less swifty
-//            if let serverCertArray = SecTrustCopyCertificateChain(trust) as? NSArray {
-//                print(serverCertArray)
-//            }
-            
 
             guard let certChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate] else {
-                print("Error getting certificate chain and converting to array")
                 secProtocolVerifyComplete(false)
                 return
             }
             
-            print(certChain)
-            for cert in certChain {
-                // Work with individual certificates
-                print(cert)
+            guard let firstCert = certChain.first else {
+                secProtocolVerifyComplete(false)
+                return
             }
             
-
-
+            let serverCertData = SecCertificateCopyData(firstCert) as Data
+            let fingerprint = sha256(data: serverCertData)
             
-            
-            
-
-            
-            
-//            let serverCertData = SecCertificateCopyData(serverCert!) as Data
-//            let fingerprint = sha256(data: serverCertData)
-//            
-//            let knownHostFile = self.knownHostsDirectory.appendingPathComponent(host)
-//            if FileManager.default.fileExists(atPath: knownHostFile.path) {
-//                // Host is known; verify fingerprint
-//                do {
-//                    let savedFingerprint = try String(contentsOf: knownHostFile, encoding: .utf8)
-//                    if savedFingerprint == fingerprint {
-//                        secProtocolVerifyComplete(true)
-//                    } else {
-//                        // Fingerprint mismatch; possible MITM attack
-//                        secProtocolVerifyComplete(false)
-//                    }
-//                } catch {
-//                    secProtocolVerifyComplete(false)
-//                }
-//            } else {
-//                // First time seeing this host; save the fingerprint
-//                do {
-//                    try fingerprint.write(to: knownHostFile, atomically: true, encoding: .utf8)
-//                    secProtocolVerifyComplete(true)
-//                } catch {
-//                    secProtocolVerifyComplete(false)
-//                }
-//            }
+            let knownHostFile = self.knownHostsDirectory.appendingPathComponent(host)
+            if FileManager.default.fileExists(atPath: knownHostFile.path) {
+                // Host is known; verify fingerprint
+                do {
+                    let savedFingerprint = try String(contentsOf: knownHostFile, encoding: .utf8)
+                    if savedFingerprint == fingerprint {
+                        secProtocolVerifyComplete(true)
+                    } else {
+                        // Fingerprint mismatch; possible MITM attack
+                        secProtocolVerifyComplete(false)
+                    }
+                } catch {
+                    secProtocolVerifyComplete(false)
+                }
+            } else {
+                // First time seeing this host; save the fingerprint
+                do {
+                    try fingerprint.write(to: knownHostFile, atomically: true, encoding: .utf8)
+                    secProtocolVerifyComplete(true)
+                } catch {
+                    secProtocolVerifyComplete(false)
+                }
+            }
             
             //FIXME: do actual TOFU verification
             secProtocolVerifyComplete(true)
