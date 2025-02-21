@@ -146,57 +146,25 @@ public class GeminiClient: @unchecked Sendable {
                 return
             }
             
-            // Print first item
-            print(CFArrayGetValueAtIndex(serverCert, 0))
+
+// Other method, less swifty
+//            if let serverCertArray = SecTrustCopyCertificateChain(trust) as? NSArray {
+//                print(serverCertArray)
+//            }
             
-            print("as? NSArray")
-            if let serverCertArray = SecTrustCopyCertificateChain(trust) as? NSArray {
-                print(serverCertArray)
+
+            guard let certChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate] else {
+                print("Error getting certificate chain and converting to array")
+                secProtocolVerifyComplete(false)
+                return
             }
             
-            print("as? [SecCertificate]")
-            if let certChain1 = SecTrustCopyCertificateChain(trust) as? [SecCertificate] {
-                // Now you have an array of SecCertificate objects
-                print(certChain1)
-                for cert in certChain1 {
-                    // Work with individual certificates
-                    print(cert)
-                }
+            print(certChain)
+            for cert in certChain {
+                // Work with individual certificates
+                print(cert)
             }
             
-            print("complex type check way")
-            if let certChain = SecTrustCopyCertificateChain(trust) {
-                let certCount = CFArrayGetCount(certChain)
-                if certCount > 0 {
-                    for index in 0..<certCount {
-                        // Get the certificate at the current index
-                        if let certPointer = CFArrayGetValueAtIndex(certChain, index) {
-                            // Convert the pointer to CFTypeRef
-                            let certRef = unsafeBitCast(certPointer, to: CFTypeRef.self)
-                            // Verify that the CFTypeRef is actually a SecCertificate
-                            if CFGetTypeID(certRef) == SecCertificateGetTypeID() {
-                                // It's safe to treat certRef as a SecCertificate
-                                let certificate = certRef as! SecCertificate
-                                // Now you can use 'certificate' as a SecCertificate
-                                // For example, get the certificate data
-                                if let certData = SecCertificateCopyData(certificate) as Data? {
-                                    print("cert at index \(index): \(certData)")
-                                }
-                            } else {
-                                // The type did not match; handle the error appropriately
-                                print("Element at index \(index) is not a SecCertificate")
-                            }
-                        } else {
-                            // Failed to get value at index; handle the error appropriately
-                            print("Failed to get certificate at index \(index)")
-                        }
-                    }
-                } else {
-                    print("Certificate chain is empty")
-                }
-            } else {
-                print("Failed to copy certificate chain from serverTrust")
-            }
 
 
             
