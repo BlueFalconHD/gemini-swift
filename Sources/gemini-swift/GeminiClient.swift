@@ -133,7 +133,14 @@ public class GeminiClient: @unchecked Sendable {
             }
             let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
             let serverCert = SecTrustCopyCertificateChain(trust)
-            print(serverCert)
+            // serverCert is Optional(<__NSSingleObjectArrayI 0x6000024d8130>(<cert(0x121105d10) s: geminiprotocol.net i: geminiprotocol.net>))
+            // print type of first item
+            
+            let certData = CFArrayGetValueAtIndex(serverCert, 0)
+            print(type(of: certData))
+            print(certData)
+
+            
             
 //            let serverCertData = SecCertificateCopyData(serverCert!) as Data
 //            let fingerprint = sha256(data: serverCertData)
