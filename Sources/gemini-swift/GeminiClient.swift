@@ -132,13 +132,26 @@ public class GeminiClient: @unchecked Sendable {
                 return
             }
             let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
-            let serverCert = SecTrustCopyCertificateChain(trust)
-            // serverCert is Optional(<__NSSingleObjectArrayI 0x6000024d8130>(<cert(0x121105d10) s: geminiprotocol.net i: geminiprotocol.net>))
-            // print type of first item
             
-            let certData = CFArrayGetValueAtIndex(serverCert, 0)
-            print(type(of: certData))
-            print(certData)
+            // serverCert is CFArray<UnsafeRawPointer<SecCertificate>>
+            guard let serverCert = SecTrustCopyCertificateChain(trust) else {
+                secProtocolVerifyComplete(false)
+                return
+            }
+            
+            // make sure there is at least one certificate
+            if CFArrayGetCount(serverCert) == 0 {
+                secProtocolVerifyComplete(false)
+                //FIXME: handle error better
+                return
+            }
+            
+            // Print first item
+            let serverCertData = SecCertificateCopyData(CFArrayGetValueAtIndex(serverCert, 0) as! SecCertificate) as Data
+            print(serverCertData)
+            
+            
+            
 
             
             
