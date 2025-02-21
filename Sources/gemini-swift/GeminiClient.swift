@@ -1,7 +1,7 @@
 import Foundation
 import Network
 import Security
-import CommonCrypto
+import CryptoKit
 
 /// A GeminiClient is responsible for making requests to Gemini servers.
 public class GeminiClient: @unchecked Sendable {
@@ -169,11 +169,8 @@ public class GeminiClient: @unchecked Sendable {
     
     /// Calculates the SHA256 fingerprint of the certificate data.
     private func sha256(data: Data) -> String {
-        var sha256 = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        data.withUnsafeBytes { ptr in
-            _ = CC_SHA256(ptr.baseAddress, CC_LONG(data.count), &sha256)
-        }
-        return Data(sha256).base64EncodedString()
+        let hash = SHA256.hash(data: data)
+        return Data(hash).base64EncodedString()
     }
     
     /// Sends data over the connection.
