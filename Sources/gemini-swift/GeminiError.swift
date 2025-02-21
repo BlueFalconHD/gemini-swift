@@ -11,7 +11,9 @@ import Foundation
 public enum GeminiError: Error {
     case invalidURL
     case invalidResponse
-    case badStatusCode(Int)
+    case invalidRedirectURL
+    case tooManyRedirects
     case connectionClosed
+    case badStatusCode(Int)
     case custom(String)
 }
