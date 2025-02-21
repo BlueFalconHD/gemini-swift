@@ -4,7 +4,6 @@ import Security
 import CommonCrypto
 
 /// A GeminiClient is responsible for making requests to Gemini servers.
-@MainActor
 public class GeminiClient: @unchecked Sendable {
     /// The directory where known hosts and their certificate fingerprints are stored.
     private let knownHostsDirectory: URL
