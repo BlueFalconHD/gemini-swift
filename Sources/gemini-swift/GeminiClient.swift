@@ -125,53 +125,43 @@ public class GeminiClient: @unchecked Sendable {
         sec_protocol_options_set_min_tls_protocol_version(options.securityProtocolOptions, .TLSv12)
         sec_protocol_options_set_max_tls_protocol_version(options.securityProtocolOptions, .TLSv13)
         
-        // Implement TOFU
+        // Implement TOFU using Keychain
         sec_protocol_options_set_verify_block(options.securityProtocolOptions, { [weak self] secProtocolMetadata, secTrust, secProtocolVerifyComplete in
             guard let self = self else {
                 secProtocolVerifyComplete(false)
                 return
             }
-            let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
-
-            guard let certChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate] else {
-                secProtocolVerifyComplete(false)
-                return
-            }
             
-            guard let firstCert = certChain.first else {
+            let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
+            
+            guard let certChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+                  let firstCert = certChain.first else {
                 secProtocolVerifyComplete(false)
                 return
             }
             
             let serverCertData = SecCertificateCopyData(firstCert) as Data
-            let fingerprint = sha256(data: serverCertData)
+            let fingerprint = self.sha256(data: serverCertData)
             
-            let knownHostFile = self.knownHostsDirectory.appendingPathComponent(host)
-            if FileManager.default.fileExists(atPath: knownHostFile.path) {
-                // Host is known; verify fingerprint
-                do {
-                    let savedFingerprint = try String(contentsOf: knownHostFile, encoding: .utf8)
+            do {
+                if let savedFingerprint = try KeychainHelper.getFingerprint(forHost: host) {
+                    // Host is known; verify fingerprint
                     if savedFingerprint == fingerprint {
                         secProtocolVerifyComplete(true)
                     } else {
                         // Fingerprint mismatch; possible MITM attack
                         secProtocolVerifyComplete(false)
                     }
-                } catch {
-                    secProtocolVerifyComplete(false)
-                }
-            } else {
-                // First time seeing this host; save the fingerprint
-                do {
-                    try fingerprint.write(to: knownHostFile, atomically: true, encoding: .utf8)
+                } else {
+                    // First time seeing this host; save the fingerprint
+                    try KeychainHelper.saveFingerprint(fingerprint, forHost: host)
                     secProtocolVerifyComplete(true)
-                } catch {
-                    secProtocolVerifyComplete(false)
                 }
+            } catch {
+                // Handle Keychain errors appropriately
+                secProtocolVerifyComplete(false)
             }
             
-            //FIXME: do actual TOFU verification
-            secProtocolVerifyComplete(true)
         }, DispatchQueue.global())
         
         return options
