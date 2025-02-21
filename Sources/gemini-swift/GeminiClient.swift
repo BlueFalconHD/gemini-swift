@@ -5,9 +5,6 @@ import CryptoKit
 
 /// A GeminiClient is responsible for making requests to Gemini servers.
 public class GeminiClient: @unchecked Sendable {
-    /// The directory where known hosts and their certificate fingerprints are stored.
-    private let knownHostsDirectory: URL
-    
     private actor ConnectionState {
         var isCancelled = false
         
@@ -20,11 +17,8 @@ public class GeminiClient: @unchecked Sendable {
         }
     }
     
-    /// Initializes a new GeminiClient with the given directory for storing known hosts.
-    public init(knownHostsDirectory: URL) {
-        self.knownHostsDirectory = knownHostsDirectory
-        try? FileManager.default.createDirectory(at: knownHostsDirectory, withIntermediateDirectories: true)
-    }
+    /// Initializes a new GeminiClient
+    public init() {}
     
     /// Sends a request to the given URL.
     /// - Parameter url: The Gemini URL to request.
