@@ -1,5 +1,5 @@
 //
-//  ResponseCode.swift
+//  GeminiStatus.swift
 //  gemini-swift
 //
 //  Created by Hayes Dombroski on 2/20/25.
@@ -14,7 +14,7 @@
 // 60-69 Client certificates
 
 /// Represents a response code from a Gemini server. Splits them up into general categories as described by the spec, but also allows access to the raw value.
-enum ResponseCode {
+public enum GeminiStatus {
     case inputExpected(Int)
     case success(Int)
     case redirection(Int)
@@ -43,7 +43,7 @@ enum ResponseCode {
     }
 }
 
-extension ResponseCode {
+public extension GeminiStatus {
     init(rawValue: Int) {
         switch rawValue {
         case 10...19:

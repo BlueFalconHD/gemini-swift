@@ -10,7 +10,7 @@ import Foundation
 /// Represents a response from a Gemini server.
 public struct GeminiResponse {
     /// The status code of the response.
-    public let status: Int
+    public let status: GeminiStatus
     
     /// The meta text of the response.
     public let meta: String
