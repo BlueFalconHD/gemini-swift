@@ -147,8 +147,8 @@ public class GeminiClient: @unchecked Sendable {
             }
             
             // Print first item
-            let serverCertData = SecCertificateCopyData(CFArrayGetValueAtIndex(serverCert, 0) as! SecCertificate) as Data
-            print(serverCertData)
+            print(CFArrayGetValueAtIndex(serverCert, 0))
+
             
             
             
