@@ -149,10 +149,12 @@ public class GeminiClient: @unchecked Sendable {
             // Print first item
             print(CFArrayGetValueAtIndex(serverCert, 0))
             
+            print("as? NSArray")
             if let serverCertArray = SecTrustCopyCertificateChain(trust) as? NSArray {
                 print(serverCertArray)
             }
             
+            print("as? [SecCertificate]")
             if let certChain1 = SecTrustCopyCertificateChain(trust) as? [SecCertificate] {
                 // Now you have an array of SecCertificate objects
                 print(certChain1)
@@ -162,6 +164,7 @@ public class GeminiClient: @unchecked Sendable {
                 }
             }
             
+            print("complex type check way")
             if let certChain = SecTrustCopyCertificateChain(trust) {
                 let certCount = CFArrayGetCount(certChain)
                 if certCount > 0 {
@@ -177,7 +180,7 @@ public class GeminiClient: @unchecked Sendable {
                                 // Now you can use 'certificate' as a SecCertificate
                                 // For example, get the certificate data
                                 if let certData = SecCertificateCopyData(certificate) as Data? {
-                                    // Do something with certData
+                                    print("cert at index \(index): \(certData)")
                                 }
                             } else {
                                 // The type did not match; handle the error appropriately
