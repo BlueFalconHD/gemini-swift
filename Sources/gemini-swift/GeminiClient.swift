@@ -148,6 +148,53 @@ public class GeminiClient: @unchecked Sendable {
             
             // Print first item
             print(CFArrayGetValueAtIndex(serverCert, 0))
+            
+            if let serverCertArray = SecTrustCopyCertificateChain(trust) as? NSArray {
+                print(serverCertArray)
+            }
+            
+            if let certChain1 = SecTrustCopyCertificateChain(trust) as? [SecCertificate] {
+                // Now you have an array of SecCertificate objects
+                print(certChain1)
+                for cert in certChain1 {
+                    // Work with individual certificates
+                    print(cert)
+                }
+            }
+            
+            if let certChain = SecTrustCopyCertificateChain(trust) {
+                let certCount = CFArrayGetCount(certChain)
+                if certCount > 0 {
+                    for index in 0..<certCount {
+                        // Get the certificate at the current index
+                        if let certPointer = CFArrayGetValueAtIndex(certChain, index) {
+                            // Convert the pointer to CFTypeRef
+                            let certRef = unsafeBitCast(certPointer, to: CFTypeRef.self)
+                            // Verify that the CFTypeRef is actually a SecCertificate
+                            if CFGetTypeID(certRef) == SecCertificateGetTypeID() {
+                                // It's safe to treat certRef as a SecCertificate
+                                let certificate = certRef as! SecCertificate
+                                // Now you can use 'certificate' as a SecCertificate
+                                // For example, get the certificate data
+                                if let certData = SecCertificateCopyData(certificate) as Data? {
+                                    // Do something with certData
+                                }
+                            } else {
+                                // The type did not match; handle the error appropriately
+                                print("Element at index \(index) is not a SecCertificate")
+                            }
+                        } else {
+                            // Failed to get value at index; handle the error appropriately
+                            print("Failed to get certificate at index \(index)")
+                        }
+                    }
+                } else {
+                    print("Certificate chain is empty")
+                }
+            } else {
+                print("Failed to copy certificate chain from serverTrust")
+            }
+
 
             
             
