@@ -99,6 +99,7 @@ public class GeminiClient: @unchecked Sendable {
 
         // Handle redirection
         if status >= 30 && status < 40 {
+            print("Redirecting to \(meta)")
             guard let redirectURL = URL(string: meta, relativeTo: url) else {
                 throw GeminiError.invalidRedirectURL
             }
@@ -117,6 +118,7 @@ public class GeminiClient: @unchecked Sendable {
         // Read the body if applicable
         var bodyData = Data()
         if status >= 20 && status < 30 {
+            print("Receiving body data")
             bodyData = try await receiveBody(over: connection)
         }
 
@@ -134,14 +136,16 @@ public class GeminiClient: @unchecked Sendable {
         // Implement TOFU using Keychain
         sec_protocol_options_set_verify_block(options.securityProtocolOptions, { [weak self] secProtocolMetadata, secTrust, secProtocolVerifyComplete in
             guard let self = self else {
+                print("self is nil")
                 secProtocolVerifyComplete(false)
                 return
             }
-
+            
             let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
 
             guard let certChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
                   let firstCert = certChain.first else {
+                print("failed to get certificate chain")
                 secProtocolVerifyComplete(false)
                 return
             }
@@ -153,18 +157,22 @@ public class GeminiClient: @unchecked Sendable {
                 if let savedFingerprint = try KeychainHelper.getFingerprint(forHost: host) {
                     // Host is known; verify fingerprint
                     if savedFingerprint == fingerprint {
+                        print("Fingerprint matches; connection verified")
                         secProtocolVerifyComplete(true)
                     } else {
                         // Fingerprint mismatch; possible MITM attack
+                        print("Fingerprint mismatch; possible MITM attack")
                         secProtocolVerifyComplete(false)
                     }
                 } else {
                     // First time seeing this host; save the fingerprint
+                    print("First time seeing host; saving fingerprint")
                     try KeychainHelper.saveFingerprint(fingerprint, forHost: host)
                     secProtocolVerifyComplete(true)
                 }
             } catch {
                 // Handle Keychain errors appropriately
+                print("Keychain error: \(error)")
                 secProtocolVerifyComplete(false)
             }
 
@@ -181,11 +189,14 @@ public class GeminiClient: @unchecked Sendable {
 
     /// Sends data over the connection.
     private func send(data: Data, over connection: NWConnection) async throws {
+        print("sending data")
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             connection.send(content: data, completion: .contentProcessed { error in
                 if let error = error {
+                    print("error sending data: \(error)")
                     continuation.resume(throwing: error)
                 } else {
+                    print("data sent")
                     continuation.resume()
                 }
             })
@@ -194,6 +205,7 @@ public class GeminiClient: @unchecked Sendable {
 
     /// Receives a line of data over the connection.
     private func receiveLine(over connection: NWConnection) async throws -> Data {
+        print("receiving line data")
         var lineData = Data()
         while true {
             let data = try await receiveData(over: connection)
@@ -209,6 +221,7 @@ public class GeminiClient: @unchecked Sendable {
 
     /// Receives the body data over the connection.
     private func receiveBody(over connection: NWConnection) async throws -> Data {
+        print("receiving body data")
         var bodyData = Data()
         var i = 0
         repeat {
@@ -218,6 +231,8 @@ public class GeminiClient: @unchecked Sendable {
             if data.isEmpty {
                 break;
             }
+            print("length: \(data.count), hash: \(sha256(data: data))")
+            
             bodyData.append(data)
         } while true
         return bodyData
@@ -225,15 +240,20 @@ public class GeminiClient: @unchecked Sendable {
 
     /// Receives data over the connection.
     private func receiveData(over connection: NWConnection) async throws -> Data {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+        print("receiving data")
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
             connection.receive(minimumIncompleteLength: 0, maximumLength: 65536) { data, _, isComplete, error in
                 if let error = error {
+                    print("error getting data: \(error)")
                     continuation.resume(throwing: error)
                 } else if let data = data {
+                    print("got data with length: \(data.count)")
                     continuation.resume(returning: data)
                 } else if isComplete {
+                    print("no data received, connection closed")
                     continuation.resume(returning: Data())
                 } else {
+                    print("no data received, connection still open")
                     continuation.resume(throwing: GeminiError.custom("No data received"))
                 }
             }
