@@ -17,17 +17,7 @@ public class GeminiClient: @unchecked Sendable {
         }
     }
 
-    private actor BodyData {
-        var data = Data()
-
-        func append(_ data: Data) {
-            self.data.append(data)
-        }
-
-        func getData() -> Data {
-            return data
-        }
-    }
+    private let dataBuffer = DataBuffer()
 
     /// Initializes a new GeminiClient
     public init() {}
@@ -85,7 +75,7 @@ public class GeminiClient: @unchecked Sendable {
         try await send(data: requestData, over: connection)
 
         // Receive the response header
-        let (headerData, extraData) = try await receiveLine(over: connection)
+        let headerData = try await receiveLine(over: connection)
         guard let headerLine = String(data: headerData, encoding: .utf8) else {
             throw GeminiError.invalidResponse
         }
@@ -118,7 +108,6 @@ public class GeminiClient: @unchecked Sendable {
         // Read the body if applicable
         var bodyData = Data()
         if status >= 20 && status < 30 {
-            bodyData.append(extraData)
             bodyData = try await receiveBody(over: connection)
         }
 
@@ -204,21 +193,27 @@ public class GeminiClient: @unchecked Sendable {
     }
 
     /// Receives a line of data over the connection.
-    private func receiveLine(over connection: NWConnection) async throws -> (line: Data, remainder: Data) {
+    private func receiveLine(over connection: NWConnection) async throws -> Data {
+        print("receiving line data")
         var lineData = Data()
-        var remainder = Data()
         while true {
             let data = try await receiveData(over: connection)
-            if let index = data.firstIndex(of: 0x0A) {
+            if let index = data.firstIndex(of: 0x0A) { // Newline character
                 lineData.append(data.prefix(upTo: index))
-                remainder = data.suffix(from: index + 1)
+                // Save the rest of the data (after newline) to buffer
+                let restOfData = data.suffix(from: data.index(after: index))
+                if !restOfData.isEmpty {
+                    // Append the restOfData to dataBuffer
+                    await dataBuffer.append(restOfData)
+                }
                 break
             } else {
                 lineData.append(data)
             }
         }
-        return (lineData, remainder)
+        return lineData
     }
+
 
     /// Receives the body data over the connection.
     private func receiveBody(over connection: NWConnection) async throws -> Data {
@@ -242,6 +237,13 @@ public class GeminiClient: @unchecked Sendable {
     /// Receives data over the connection.
     private func receiveData(over connection: NWConnection) async throws -> Data {
         print("receiving data")
+        // First, check if there's data in buffer
+        if await !dataBuffer.isEmpty {
+            let data = await dataBuffer.getData()
+            await dataBuffer.empty()
+            return data
+        }
+        // If buffer is empty, read from connection
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
             connection.receive(minimumIncompleteLength: 0, maximumLength: 65536) { data, _, isComplete, error in
                 if let error = error {
