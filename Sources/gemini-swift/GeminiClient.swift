@@ -17,6 +17,18 @@ public class GeminiClient: @unchecked Sendable {
         }
     }
 
+    private actor BodyData {
+        var data = Data()
+
+        func append(_ data: Data) {
+            self.data.append(data)
+        }
+
+        func getData() -> Data {
+            return data
+        }
+    }
+
     /// Initializes a new GeminiClient
     public init() {}
 
@@ -198,9 +210,18 @@ public class GeminiClient: @unchecked Sendable {
     /// Receives the body data over the connection.
     private func receiveBody(over connection: NWConnection) async throws -> Data {
         var bodyData = Data()
+        var continguouslyEmpty: Int = 0
         repeat {
             let data = try await receiveData(over: connection)
-            if data.isEmpty { break }
+            if data.isEmpty {
+                continguouslyEmpty += 1
+                print("empty data, continuing to recieve to test")
+                
+                if continguouslyEmpty > 10 {
+                    print("breaking due to empty data")
+                    break
+                }
+            }
             bodyData.append(data)
         } while true
         return bodyData
@@ -209,7 +230,7 @@ public class GeminiClient: @unchecked Sendable {
     /// Receives data over the connection.
     private func receiveData(over connection: NWConnection) async throws -> Data {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, isComplete, error in
+            connection.receive(minimumIncompleteLength: 0, maximumLength: 65536) { data, _, isComplete, error in
                 if let error = error {
                     continuation.resume(throwing: error)
                 } else if let data = data {
