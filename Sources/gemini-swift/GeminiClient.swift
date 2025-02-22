@@ -85,7 +85,7 @@ public class GeminiClient: @unchecked Sendable {
         try await send(data: requestData, over: connection)
 
         // Receive the response header
-        let headerData = try await receiveLine(over: connection)
+        let (headerData, extraData) = try await receiveLine(over: connection)
         guard let headerLine = String(data: headerData, encoding: .utf8) else {
             throw GeminiError.invalidResponse
         }
@@ -118,7 +118,7 @@ public class GeminiClient: @unchecked Sendable {
         // Read the body if applicable
         var bodyData = Data()
         if status >= 20 && status < 30 {
-            print("Receiving body data")
+            bodyData.append(extraData)
             bodyData = try await receiveBody(over: connection)
         }
 
@@ -204,19 +204,20 @@ public class GeminiClient: @unchecked Sendable {
     }
 
     /// Receives a line of data over the connection.
-    private func receiveLine(over connection: NWConnection) async throws -> Data {
-        print("receiving line data")
+    private func receiveLine(over connection: NWConnection) async throws -> (line: Data, remainder: Data) {
         var lineData = Data()
+        var remainder = Data()
         while true {
             let data = try await receiveData(over: connection)
-            if let index = data.firstIndex(of: 0x0A) { // Newline character
+            if let index = data.firstIndex(of: 0x0A) {
                 lineData.append(data.prefix(upTo: index))
+                remainder = data.suffix(from: index + 1)
                 break
             } else {
                 lineData.append(data)
             }
         }
-        return lineData
+        return (lineData, remainder)
     }
 
     /// Receives the body data over the connection.
