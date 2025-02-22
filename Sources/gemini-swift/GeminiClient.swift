@@ -210,17 +210,13 @@ public class GeminiClient: @unchecked Sendable {
     /// Receives the body data over the connection.
     private func receiveBody(over connection: NWConnection) async throws -> Data {
         var bodyData = Data()
-        var continguouslyEmpty: Int = 0
+        var i = 0
         repeat {
+            i += 1
+            print("receiving body data \(i)")
             let data = try await receiveData(over: connection)
             if data.isEmpty {
-                continguouslyEmpty += 1
-                print("empty data, continuing to recieve to test")
-                
-                if continguouslyEmpty > 10 {
-                    print("breaking due to empty data")
-                    break
-                }
+                break;
             }
             bodyData.append(data)
         } while true
