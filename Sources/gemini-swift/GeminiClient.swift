@@ -225,7 +225,7 @@ public class GeminiClient: @unchecked Sendable {
         }
         // If buffer is empty, read from connection
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
-            connection.receive(minimumIncompleteLength: 0, maximumLength: 65536) { data, _, isComplete, error in
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, _, isComplete, error in
                 if let error = error {
                     continuation.resume(throwing: error)
                 } else if let data = data {
